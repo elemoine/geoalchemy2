@@ -293,6 +293,10 @@ _FUNCTIONS = [
      'For geography: Uses a planar transform wrapper. Introduced in 1.5 '
      'support for different end cap and mitre settings to control shape.'),
 
+    ('ST_ConvexHull', types.Geometry,
+     'Returns a geometry represents the minimum convex geometry that encloses '
+     'all geometries within the set.'),
+
     ('ST_Difference', types.Geometry,
      'Returns a geometry that represents that part of geometry A that does '
      'not intersect with geometry B.'),

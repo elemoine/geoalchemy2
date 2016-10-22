@@ -40,15 +40,17 @@ The very first object that we need to create is a ``Table``. Here
 we create a ``lake_table`` object, which will correspond to the
 ``lake`` table in the database::
 
-    >>> from sqlalchemy import Table, Column, Integer, String, MetaData
+    >>> from sqlalchemy import Table, Column, Integer, String, Index, MetaData
     >>> from geoalchemy2 import Geometry
     >>>
     >>> metadata = MetaData()
     >>> lake_table = Table('lake', metadata,
     ...     Column('id', Integer, primary_key=True),
     ...     Column('name', String),
-    ...     Column('geom', Geometry('POLYGON'))
+    ...     Column('geom', Geometry('POLYGON', spatial_index=False))
     ... )
+    ...
+    >>> Index('idx_lake_geom', lake_table.c.geom, postgresql_using='gist')
 
 This table is composed of three columns, ``id``, ``name`` and ``geom``. The
 ``geom`` column is a :class:`geoalchemy2.types.Geometry` column whose
@@ -56,6 +58,11 @@ This table is composed of three columns, ``id``, ``name`` and ``geom``. The
  
 Any ``Table`` object is added to a ``MetaData`` object, which is a catalog of
 ``Table`` objects (and other related objects).
+
+.. warning:: When ``spatial_index`` is set to ``True`` GeoAlchemy creates an
+    index on the geometry column. This option will be removed in 0.4.0. It is
+    encouraged to set it to ``False`` and explicitely create an index as shown
+    in the example.
 
 Create the Table
 ----------------

@@ -7,6 +7,8 @@ Reference
 ---------
 """
 
+import warnings
+
 from sqlalchemy.types import UserDefinedType, Integer
 from sqlalchemy.sql import func
 from sqlalchemy.dialects import postgresql
@@ -64,7 +66,21 @@ class _GISType(UserDefinedType):
 
     ``spatial_index``
 
+        *Deprecated*
+
         Indicate if a spatial index should be created. Default is ``True``.
+
+        This option will be removed in 0.4.0. In the mean time it is encouraged
+        to set it to ``False`` and explicitely create an ``Index`` object. For
+        example::
+
+            class Lake(Base):
+                __tablename__ = 'lake'
+                id = Column(Integer, primary_key=True)
+                geom = Column(Geometry('LINESTRING', spatial_index=False))
+
+            Index('idx_lake_geom', Lake.__table__.c.geom,
+                  postgresql_using='gist')
 
     ``management``
 
@@ -100,6 +116,9 @@ class _GISType(UserDefinedType):
         self.spatial_index = spatial_index
         self.management = management
         self.extended = self.as_binary == 'ST_AsEWKB'
+        if spatial_index:
+            warnings.warn("spatial_index=True is deprecated. Create an index "
+                          "explicitely using Index.", DeprecationWarning)
 
     def get_col_spec(self):
         return '%s(%s,%d)' % (self.name, self.geometry_type, self.srid)
@@ -192,8 +211,21 @@ class Raster(UserDefinedType):
 
     ``spatial_index``
 
+        *Deprecated*
+
         Indicate if a spatial index should be created. Default is ``True``.
 
+        This option will be removed in 0.4.0. In the mean time it is encouraged
+        to set it to ``False`` and explicitely create an ``Index`` object. For
+        example::
+
+            class Ocean(Base):
+                __tablename__ = 'ocean'
+                id = Column(Integer, primary_key=True)
+                rast = Column(Raster(spatial_index=False))
+
+            Index('idx_ocean_rast', func.ST_ConvexHull(Ocean.__table__.c.rast),
+                  postgresql_using='gist')
     """
 
     comparator_factory = BaseComparator
@@ -204,6 +236,9 @@ class Raster(UserDefinedType):
 
     def __init__(self, spatial_index=True):
         self.spatial_index = spatial_index
+        if spatial_index:
+            warnings.warn("spatial_index=True is deprecated. Create an index "
+                          "explicitely using Index.", DeprecationWarning)
 
     def get_col_spec(self):
         return 'raster'

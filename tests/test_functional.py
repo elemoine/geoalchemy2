@@ -8,7 +8,7 @@ else:
     compat.register()
     del compat
 
-from sqlalchemy import create_engine, Table, MetaData, Column, Integer
+from sqlalchemy import create_engine, Table, MetaData, Column, Integer, Index
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.engine import reflection
@@ -27,47 +27,59 @@ engine = create_engine('postgresql://gis:gis@localhost/gis', echo=True)
 metadata = MetaData(engine)
 Base = declarative_base(metadata=metadata)
 
+session = sessionmaker(bind=engine)()
+postgis_version = session.execute(func.postgis_version()).scalar()
+postgis2 = postgis_version.startswith('2.')
+
+# Note: with PostGIS 1.x "management" is set to True on the Geometry for the
+# AddGeometryColumn and DropGeometryColumn management functions to be used.
+# And "spatial_index" is set to True as well to let GeoAlchemy create the
+# spatial index.
+
 
 class Lake(Base):
     __tablename__ = 'lake'
     __table_args__ = {'schema': 'gis'}
     id = Column(Integer, primary_key=True)
-    geom = Column(Geometry(geometry_type='LINESTRING', srid=4326))
+    geom = Column(Geometry(geometry_type='LINESTRING', srid=4326,
+                           management=not postgis2,
+                           spatial_index=not postgis2))
 
     def __init__(self, geom):
         self.geom = geom
+
+if postgis2:
+    Index('idx_lake_geom', Lake.__table__.c.geom, postgresql_using='gist')
 
 
 class Poi(Base):
     __tablename__ = 'poi'
     __table_args__ = {'schema': 'gis'}
     id = Column(Integer, primary_key=True)
-    geog = Column(Geography(geometry_type='POINT', srid=4326))
+    geog = Column(Geography(geometry_type='POINT', srid=4326,
+                            spatial_index=False))
 
     def __init__(self, geog):
         self.geog = geog
 
+Index('idx_poi_geog', Poi.__table__.c.geog, postgresql_using='gist')
 
-session = sessionmaker(bind=engine)()
-
-postgis_version = session.execute(func.postgis_version()).scalar()
-if not postgis_version.startswith('2.'):
-    # With PostGIS 1.x the AddGeometryColumn and DropGeometryColumn
-    # management functions should be used.
-    Lake.__table__.c.geom.type.management = True
-else:
+if postgis2:
     # The raster type is only available on PostGIS 2.0 and above
     class Ocean(Base):
         __tablename__ = 'ocean'
         __table_args__ = {'schema': 'public'}
         id = Column(Integer, primary_key=True)
-        rast = Column(Raster)
+        rast = Column(Raster(spatial_index=False))
 
         def __init__(self, rast):
             self.rast = rast
 
+    Index('idx_ocean_rast', func.ST_ConvexHull(Ocean.__table__.c.rast),
+          postgresql_using='gist')
+
 postgis2_required = pytest.mark.skipif(
-    not postgis_version.startswith('2.'),
+    not postgis2,
     reason="requires PostGIS 2.x",
 )
 

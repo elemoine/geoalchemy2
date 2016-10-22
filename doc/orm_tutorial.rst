@@ -45,7 +45,7 @@ database table they will be mapped to.
 ::
 
     >>> from sqlalchemy.ext.declarative import declarative_base
-    >>> from sqlalchemy import Column, Integer, String
+    >>> from sqlalchemy import Column, Integer, String, Index
     >>> from geoalchemy2 import Geometry
     >>>
     >>> Base = declarative_base()
@@ -54,14 +54,20 @@ database table they will be mapped to.
     ...     __tablename__ = 'lake'
     ...     id = Column(Integer, primary_key=True)
     ...     name = Column(String)
-    ...     geom = Column(Geometry('POLYGON'))
-
+    ...     geom = Column(Geometry('POLYGON', spatial_index=False))
+    ...
+    >>> Index('idx_lake_geom', Lake.__table__.c.geom, postgresql_using='gist')
 
 The ``Lake`` class establishes details about the table being mapped, including
 the name of the table denoted by ``__tablename__``, and three columns ``id``,
 ``name``, and ``geom``. The ``id`` column will be the primary key of the table.
 The ``geom`` column is a :class:`geoalchemy2.types.Geometry` column whose
 ``geometry_type`` is ``POLYGON``.
+
+.. warning:: When ``spatial_index`` is set to ``True`` GeoAlchemy creates an
+    index on the geometry column. This option will be removed in 0.4.0. It is
+    encouraged to set it to ``False`` and explicitely create an index as shown
+    in the example.
 
 Create the Table in the Database
 --------------------------------
