@@ -12,7 +12,7 @@ from .elements import (  # NOQA
 
 from . import functions  # NOQA
 
-from sqlalchemy import Table, event
+from sqlalchemy import Table, Index, event
 from sqlalchemy.sql import select, func, expression
 
 
@@ -87,10 +87,9 @@ def _setup_ddl_event_listeners():
                 # Add spatial indices for the Geometry and Geography columns
                 if isinstance(c.type, (Geometry, Geography)) and \
                         c.type.spatial_index is True:
-                    bind.execute('CREATE INDEX "idx_%s_%s" ON "%s"."%s" '
-                                 'USING GIST ("%s")' %
-                                 (table.name, c.name, table_schema,
-                                  table.name, c.name))
+                    index = Index('idx_%s_%s' % (table.name, c.name),
+                                  c, postgresql_using='gist')
+                    index.create(bind)
 
                 # Add spatial indices for the Raster columns
                 #
