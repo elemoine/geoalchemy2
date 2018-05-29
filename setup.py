@@ -2,6 +2,7 @@ from setuptools import setup, find_packages
 
 
 version = '0.4.2'
+test = 2
 
 setup(
     name='GeoAlchemy2',
